@@ -2,11 +2,15 @@ package masque
 
 import (
 	"crypto/tls"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/lucas-clemente/quic-go/http3"
 )
+
+const flowIDHeader = "Datagram-Flow-Id"
 
 type Server struct {
 	h3server http3.Server
@@ -19,6 +23,15 @@ func NewServer(addr string, tlsConf *tls.Config) *Server {
 			w.WriteHeader(400)
 		}
 		// TODO: check for the masque scheme
+		flowIDStr := r.Header.Get(flowIDHeader)
+		if len(flowIDStr) == 0 {
+			w.WriteHeader(400)
+		}
+		flowID, err := strconv.Atoi(flowIDStr)
+		if err != nil {
+			w.WriteHeader(400)
+		}
+		fmt.Println("Flow ID:", flowID)
 		w.WriteHeader(200)
 	})
 	return &Server{
