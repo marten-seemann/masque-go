@@ -50,9 +50,11 @@ func generateTLSConfig() (*tls.Config, error) {
 		return nil, err
 	}
 	return &tls.Config{
-		Certificates: []tls.Certificate{{
-			PrivateKey:  priv,
-			Certificate: [][]byte{derBytes}},
+		Certificates: []tls.Certificate{
+			{
+				PrivateKey:  priv,
+				Certificate: [][]byte{derBytes},
+			},
 		},
 	}, nil
 }
