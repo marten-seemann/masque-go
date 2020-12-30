@@ -15,7 +15,7 @@ type Client struct {
 	server *net.UDPAddr
 	rt     http3.RoundTripper
 
-	lastFlowId uint32 // use as an atomic
+	lastFlowID uint32 // use as an atomic
 }
 
 func NewClient(tlsConf *tls.Config, masqueServer *net.UDPAddr) *Client {
@@ -41,7 +41,7 @@ func (c *Client) Connect(addr *net.UDPAddr) (net.PacketConn, error) {
 		Method: "CONNECT-UDP",
 		Header: http.Header{},
 	}
-	flowID := atomic.AddUint32(&c.lastFlowId, 2)
+	flowID := atomic.AddUint32(&c.lastFlowID, 2)
 	req.Header.Add(flowIDHeader, fmt.Sprintf("%d", flowID))
 	rsp, err := c.rt.RoundTripOpt(req, http3.RoundTripOpt{SkipSchemeCheck: true})
 	if err != nil {
