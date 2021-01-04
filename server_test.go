@@ -18,10 +18,26 @@ var _ = Describe("Server", func() {
 		go s.Serve()
 
 		cl := http3.RoundTripper{TLSClientConfig: &tls.Config{RootCAs: testdata.GetRootCA()}}
-		req, err := http.NewRequest(http.MethodGet, "https://localhost:12345", nil)
+		req, err := http.NewRequest(http.MethodGet, "https://localhost:12345/", nil)
 		Expect(err).ToNot(HaveOccurred())
 		rsp, err := cl.RoundTrip(req)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(rsp.StatusCode).To(Equal(400))
+		Expect(rsp.StatusCode).To(Equal(404))
+	})
+
+	It("allows using a HTTP server and a MASQUE server at the same time", func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(418)
+		})
+		s := NewServerWithHandler("localhost:12346", testdata.GetTLSConfig(), mux)
+		go s.Serve()
+
+		cl := http3.RoundTripper{TLSClientConfig: &tls.Config{RootCAs: testdata.GetRootCA()}}
+		req, err := http.NewRequest(http.MethodGet, "https://localhost:12346/", nil)
+		Expect(err).ToNot(HaveOccurred())
+		rsp, err := cl.RoundTrip(req)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(rsp.StatusCode).To(Equal(418))
 	})
 })

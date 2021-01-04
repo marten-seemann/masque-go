@@ -18,10 +18,15 @@ type Server struct {
 }
 
 func NewServer(addr string, tlsConf *tls.Config) *Server {
+	return NewServerWithHandler(addr, tlsConf, http.DefaultServeMux)
+}
+
+func NewServerWithHandler(addr string, tlsConf *tls.Config, handler http.Handler) *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "CONNECT-UDP" {
-			w.WriteHeader(400)
+			handler.ServeHTTP(w, r)
+			return
 		}
 		// TODO: check for the masque scheme
 		flowIDItem, err := httpsfv.UnmarshalItem(r.Header[flowIDHeader])
