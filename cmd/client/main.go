@@ -5,8 +5,10 @@ import (
 	"flag"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/marten-seemann/masque-go"
+	"github.com/marten-seemann/masque-go/internal/testdata"
 )
 
 func main() {
@@ -26,7 +28,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	cl := masque.NewClient(&tls.Config{InsecureSkipVerify: true}, s)
+	tlsConf := &tls.Config{
+		RootCAs:    testdata.GetRootCA(),
+		ServerName: strings.Split(*server, ":")[0],
+	}
+	cl := masque.NewClient(tlsConf, s)
 	_, err = cl.Connect(remote)
 	log.Fatal(err)
 }
