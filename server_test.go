@@ -16,6 +16,7 @@ var _ = Describe("Server", func() {
 	It("creates a new server", func() {
 		s := NewServer("localhost:12345", testdata.GetTLSConfig())
 		go s.Serve()
+		defer s.Close()
 
 		cl := http3.RoundTripper{TLSClientConfig: &tls.Config{RootCAs: testdata.GetRootCA()}}
 		req, err := http.NewRequest(http.MethodGet, "https://localhost:12345/", nil)
@@ -25,6 +26,19 @@ var _ = Describe("Server", func() {
 		Expect(rsp.StatusCode).To(Equal(404))
 	})
 
+	It("closes", func() {
+		s := NewServer("localhost:1234", testdata.GetTLSConfig())
+		done := make(chan struct{})
+		go func() {
+			defer GinkgoRecover()
+			defer close(done)
+			s.Serve()
+		}()
+
+		s.Close()
+		Eventually(done).Should(BeClosed())
+	})
+
 	It("allows using a HTTP server and a MASQUE server at the same time", func() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -32,6 +46,7 @@ var _ = Describe("Server", func() {
 		})
 		s := NewServerWithHandler("localhost:12346", testdata.GetTLSConfig(), mux)
 		go s.Serve()
+		defer s.Close()
 
 		cl := http3.RoundTripper{TLSClientConfig: &tls.Config{RootCAs: testdata.GetRootCA()}}
 		req, err := http.NewRequest(http.MethodGet, "https://localhost:12346/", nil)

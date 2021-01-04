@@ -56,3 +56,7 @@ func (s *Server) Serve() error {
 	log.Printf("Listening for incoming connections on %s.", s.h3server.Addr)
 	return s.h3server.ListenAndServe()
 }
+
+func (s *Server) Close() error {
+	return s.h3server.Close()
+}
