@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
+
+	"github.com/dunglas/httpsfv"
 
 	"github.com/lucas-clemente/quic-go/http3"
 )
@@ -23,12 +24,12 @@ func NewServer(addr string, tlsConf *tls.Config) *Server {
 			w.WriteHeader(400)
 		}
 		// TODO: check for the masque scheme
-		flowIDStr := r.Header.Get(flowIDHeader)
-		if len(flowIDStr) == 0 {
+		flowIDItem, err := httpsfv.UnmarshalItem(r.Header[flowIDHeader])
+		if err != nil {
 			w.WriteHeader(400)
 		}
-		flowID, err := strconv.Atoi(flowIDStr)
-		if err != nil {
+		flowID, ok := flowIDItem.Value.(int64)
+		if !ok {
 			w.WriteHeader(400)
 		}
 		fmt.Println("Flow ID:", flowID)

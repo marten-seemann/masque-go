@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"sync/atomic"
 
+	"github.com/dunglas/httpsfv"
+
 	"github.com/lucas-clemente/quic-go/http3"
 )
 
@@ -42,7 +44,11 @@ func (c *Client) Connect(addr *net.UDPAddr) (net.PacketConn, error) {
 		Header: http.Header{},
 	}
 	flowID := atomic.AddUint32(&c.lastFlowID, 2)
-	req.Header.Add(flowIDHeader, fmt.Sprintf("%d", flowID))
+	v, err := httpsfv.Marshal(httpsfv.NewItem(flowID))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add(flowIDHeader, v)
 	rsp, err := c.rt.RoundTripOpt(req, http3.RoundTripOpt{SkipSchemeCheck: true})
 	if err != nil {
 		return nil, err
