@@ -2,6 +2,8 @@ package masque
 
 import (
 	"crypto/tls"
+	"fmt"
+	"net"
 	"net/http"
 
 	"github.com/lucas-clemente/quic-go/http3"
@@ -13,13 +15,35 @@ import (
 )
 
 var _ = Describe("Server", func() {
+	var (
+		conn net.PacketConn
+		url  string
+		s    *Server
+	)
+
+	BeforeEach(func() {
+		s = &Server{
+			Server: &http3.Server{
+				Server: &http.Server{TLSConfig: testdata.GetTLSConfig()},
+			},
+		}
+		addr, err := net.ResolveUDPAddr("udp", "localhost:0")
+		Expect(err).ToNot(HaveOccurred())
+		conn, err = net.ListenUDP("udp", addr)
+		Expect(err).ToNot(HaveOccurred())
+		url = fmt.Sprintf("https://localhost:%d", conn.LocalAddr().(*net.UDPAddr).Port)
+	})
+
+	AfterEach(func() {
+		Expect(conn.Close()).To(Succeed())
+	})
+
 	It("creates a new server", func() {
-		s := NewServer("localhost:12345", testdata.GetTLSConfig())
-		go s.Serve()
+		go s.Serve(conn)
 		defer s.Close()
 
 		cl := http3.RoundTripper{TLSClientConfig: &tls.Config{RootCAs: testdata.GetRootCA()}}
-		req, err := http.NewRequest(http.MethodGet, "https://localhost:12345/", nil)
+		req, err := http.NewRequest(http.MethodGet, url, nil)
 		Expect(err).ToNot(HaveOccurred())
 		rsp, err := cl.RoundTrip(req)
 		Expect(err).ToNot(HaveOccurred())
@@ -27,12 +51,11 @@ var _ = Describe("Server", func() {
 	})
 
 	It("closes", func() {
-		s := NewServer("localhost:1234", testdata.GetTLSConfig())
 		done := make(chan struct{})
 		go func() {
 			defer GinkgoRecover()
 			defer close(done)
-			s.Serve()
+			s.Serve(conn)
 		}()
 
 		s.Close()
@@ -44,12 +67,12 @@ var _ = Describe("Server", func() {
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(418)
 		})
-		s := NewServerWithHandler("localhost:12346", testdata.GetTLSConfig(), mux)
-		go s.Serve()
+		s.Handler = mux
+		go s.Serve(conn)
 		defer s.Close()
 
 		cl := http3.RoundTripper{TLSClientConfig: &tls.Config{RootCAs: testdata.GetRootCA()}}
-		req, err := http.NewRequest(http.MethodGet, "https://localhost:12346/", nil)
+		req, err := http.NewRequest(http.MethodGet, url, nil)
 		Expect(err).ToNot(HaveOccurred())
 		rsp, err := cl.RoundTrip(req)
 		Expect(err).ToNot(HaveOccurred())

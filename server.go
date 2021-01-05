@@ -1,9 +1,9 @@
 package masque
 
 import (
-	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/dunglas/httpsfv"
@@ -13,19 +13,19 @@ import (
 
 const flowIDHeader = "Datagram-Flow-Id"
 
+// Server is a MASQUE server.
+// It wraps a http3.Server. This allows running MASQUE alongside a regular HTTP server.
 type Server struct {
-	h3server http3.Server
+	*http3.Server
+
+	handler http.Handler
 }
 
-func NewServer(addr string, tlsConf *tls.Config) *Server {
-	return NewServerWithHandler(addr, tlsConf, http.DefaultServeMux)
-}
-
-func NewServerWithHandler(addr string, tlsConf *tls.Config, handler http.Handler) *Server {
+func (s *Server) setup() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "CONNECT-UDP" {
-			handler.ServeHTTP(w, r)
+			s.Server.Handler.ServeHTTP(w, r)
 			return
 		}
 		// TODO: check for the masque scheme
@@ -40,23 +40,21 @@ func NewServerWithHandler(addr string, tlsConf *tls.Config, handler http.Handler
 		fmt.Println("Flow ID:", flowID)
 		w.WriteHeader(200)
 	})
-	return &Server{
-		h3server: http3.Server{
-			Server: &http.Server{
-				Addr:      addr,
-				TLSConfig: tlsConf,
-				Handler:   mux,
-			},
-			EnableDatagrams: true,
-		},
-	}
+	s.handler = mux
 }
 
-func (s *Server) Serve() error {
-	log.Printf("Listening for incoming connections on %s.", s.h3server.Addr)
-	return s.h3server.ListenAndServe()
+func (s *Server) Serve(conn net.PacketConn) error {
+	log.Printf("Listening for incoming connections on %s.", conn.LocalAddr())
+	s.setup()
+	return s.Server.Serve(conn)
+}
+
+func (s *Server) ListenAndServe() error {
+	log.Printf("Listening for incoming connections on %s.", s.Addr)
+	s.setup()
+	return s.Server.ListenAndServe()
 }
 
 func (s *Server) Close() error {
-	return s.h3server.Close()
+	return s.Server.Close()
 }
