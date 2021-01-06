@@ -34,4 +34,28 @@ var _ = Describe("Server", func() {
 		h.ServeHTTP(rr, req)
 		Expect(rr.Code).To(Equal(400))
 	})
+
+	It("errors if the flow ID header can't be parsed", func() {
+		h := HandleMASQUE(http.DefaultServeMux)
+
+		req, err := http.NewRequest(methodConnectUDP, "/", nil)
+		Expect(err).ToNot(HaveOccurred())
+		req.Header.Add(flowIDHeader, "\"")
+
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		Expect(rr.Code).To(Equal(400))
+	})
+
+	It("errors if the flow ID header is not a number", func() {
+		h := HandleMASQUE(http.DefaultServeMux)
+
+		req, err := http.NewRequest(methodConnectUDP, "/", nil)
+		Expect(err).ToNot(HaveOccurred())
+		req.Header.Add(flowIDHeader, "foobar")
+
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		Expect(rr.Code).To(Equal(400))
+	})
 })

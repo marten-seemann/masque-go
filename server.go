@@ -29,10 +29,12 @@ func HandleMASQUE(h http.Handler) http.Handler {
 		flowIDItem, err := httpsfv.UnmarshalItem(flowIDRaw)
 		if err != nil {
 			w.WriteHeader(400)
+			return
 		}
 		flowID, ok := flowIDItem.Value.(int64)
 		if !ok {
 			w.WriteHeader(400)
+			return
 		}
 		fmt.Println("Flow ID:", flowID)
 		w.WriteHeader(200)
