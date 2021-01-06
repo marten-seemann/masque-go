@@ -19,12 +19,11 @@ func main() {
 		log.Fatal("missing MASQUE server")
 	}
 
-	server := masque.Server{
-		Server: &http3.Server{
-			Server: &http.Server{
-				Addr:      *addr,
-				TLSConfig: testdata.GetTLSConfig(),
-			},
+	server := &http3.Server{
+		Server: &http.Server{
+			Addr:      *addr,
+			TLSConfig: testdata.GetTLSConfig(),
+			Handler:   masque.HandleMASQUE(http.DefaultServeMux),
 		},
 	}
 	server.ListenAndServe()
