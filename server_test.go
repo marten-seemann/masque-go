@@ -23,4 +23,15 @@ var _ = Describe("Server", func() {
 		h.ServeHTTP(rr, req)
 		Expect(rr.Code).To(Equal(418))
 	})
+
+	It("errors if the flow ID header is missing", func() {
+		h := HandleMASQUE(http.DefaultServeMux)
+
+		req, err := http.NewRequest(methodConnectUDP, "/", nil)
+		Expect(err).ToNot(HaveOccurred())
+
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		Expect(rr.Code).To(Equal(400))
+	})
 })
